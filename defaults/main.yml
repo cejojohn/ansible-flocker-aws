@@ -1,0 +1,6 @@
+---
+cluster_name: myclustername
+control_service_node: mycontrolnode
+cluster_node_agents: mynodelist
+
+
