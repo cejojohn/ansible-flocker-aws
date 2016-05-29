@@ -1,0 +1,107 @@
+---
+- hosts:
+    - flockercli
+  tasks:
+  - name: Add Repo
+    copy:
+     src: docker.repo
+     dest: /etc/yum.repos.d
+
+  - name: Docker installation
+    yum:
+      name: docker-engine
+      state: latest
+
+  - name: Service Docker Starting
+    service:
+      name: docker
+      state: started
+  
+
+
+  - name: install epel-release
+    yum:
+      name: epel-release
+      state: latest
+  - name: pip installation
+    yum:
+      name: python-pip
+      state: latest
+  - name: Docker-compose installation
+    pip:
+      name: docker-compose
+  
+
+
+  - name: Flocker Client
+    yum :
+      name: gcc
+      state: latest 
+  - name: Flocker Client
+    yum :
+      name: libffi-devel
+      state: latest
+  - name: Flocker Client
+    yum :
+      name: openssl-devel
+      state: latest
+  - name: Flocker Client
+    yum :
+      name: python
+      state: latest
+  - name: Flocker Client
+    yum :
+      name: python-devel
+      state: latest
+  - name: Flocker Client
+    yum :
+      name: python-virtualenv
+      state: latest
+  
+
+
+  - name: Manually create the initial virtualenv
+    command: virtualenv /root/flocker-client -p python2.7 creates="/root/flocker-client"
+
+  - name: virtualenv activate and package installation
+    pip: 
+      name: pip
+      name: https://clusterhq-archive.s3.amazonaws.com/python/Flocker-1.12.0-py2-none-any.whl
+      state: latest
+      virtualenv: /root/flocker-client
+      virtualenv_python: python2.7
+
+
+
+
+
+#### Flocker common Packages
+- hosts:
+    - controlnode
+
+  tasks:
+  - name: Add Repo
+    copy:
+     src: docker.repo
+     dest: /etc/yum.repos.d
+
+  - name: Docker installation
+    yum:
+      name: docker-engine
+      state: latest
+
+  - name: Service Docker Starting
+    service:
+      name: docker
+      state: started
+
+  - name: flocker node service
+    yum:
+      name: https://clusterhq-archive.s3.amazonaws.com/centos/clusterhq-release.el7.centos.noarch.rpm
+      state: present
+    yum:
+      name: clusterhq-flocker-node
+      state: latest
+    yum:
+      name: clusterhq-flocker-docker-plugin
+      state: latest
