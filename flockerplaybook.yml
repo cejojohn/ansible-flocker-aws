@@ -35,28 +35,28 @@
 
   - name: Flocker Client
     yum :
-      name: gcc
+      name: gcc,libffi-devel,openssl-devel,python,python-devel,python-virtualenv
       state: latest 
-  - name: Flocker Client
-    yum :
-      name: libffi-devel
-      state: latest
-  - name: Flocker Client
-    yum :
-      name: openssl-devel
-      state: latest
-  - name: Flocker Client
-    yum :
-      name: python
-      state: latest
-  - name: Flocker Client
-    yum :
-      name: python-devel
-      state: latest
-  - name: Flocker Client
-    yum :
-      name: python-virtualenv
-      state: latest
+#  - name: Flocker Client
+ #   yum :
+#      name: libffi-devel
+#      state: latest
+ # - name: Flocker Client
+  #  yum :
+   #   name: openssl-devel
+    #  state: latest
+ # - name: Flocker Client
+    #yum :
+  #    name: python
+   #   state: latest
+#  - name: Flocker Client
+ #   yum :
+  #    name: python-devel
+   #   state: latest
+#  - name: Flocker Client
+ #   yum :
+  #    name: python-virtualenv
+   #   state: latest
   
 
 
@@ -78,7 +78,7 @@
 #### Flocker common Packages
 - hosts:
     - controlnode
-
+    - flockernode
   tasks:
   - name: Add Repo
     copy:
