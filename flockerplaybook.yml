@@ -37,27 +37,6 @@
     yum :
       name: gcc,libffi-devel,openssl-devel,python,python-devel,python-virtualenv
       state: latest 
-#  - name: Flocker Client
- #   yum :
-#      name: libffi-devel
-#      state: latest
- # - name: Flocker Client
-  #  yum :
-   #   name: openssl-devel
-    #  state: latest
- # - name: Flocker Client
-    #yum :
-  #    name: python
-   #   state: latest
-#  - name: Flocker Client
- #   yum :
-  #    name: python-devel
-   #   state: latest
-#  - name: Flocker Client
- #   yum :
-  #    name: python-virtualenv
-   #   state: latest
-  
 
 
   - name: Manually create the initial virtualenv
@@ -66,12 +45,13 @@
   - name: virtualenv activate and package installation
     pip: 
       name: pip
+      state: latest
+  - name: Virtualenv active and package installation 
+    pip:
       name: https://clusterhq-archive.s3.amazonaws.com/python/Flocker-1.12.0-py2-none-any.whl
       state: latest
       virtualenv: /root/flocker-client
       virtualenv_python: python2.7
-
-
 
 
 
@@ -99,9 +79,13 @@
     yum:
       name: https://clusterhq-archive.s3.amazonaws.com/centos/clusterhq-release.el7.centos.noarch.rpm
       state: present
+  - name: Installing node service packages
     yum:
-      name: clusterhq-flocker-node
+      name: clusterhq-flocker-node,clusterhq-flocker-docker-plugin
       state: latest
-    yum:
-      name: clusterhq-flocker-docker-plugin
-      state: latest
+  - name: Creating flocker directory
+    file: 
+     path: /etc/flocker 
+     state: directory 
+     mode: 0755
+
