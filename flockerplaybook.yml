@@ -46,6 +46,8 @@
     pip: 
       name: pip
       state: latest
+      virtualenv: /root/flocker-client
+      virtualenv_python: python2.7
   - name: Virtualenv active and package installation 
     pip:
       name: https://clusterhq-archive.s3.amazonaws.com/python/Flocker-1.12.0-py2-none-any.whl
@@ -55,7 +57,7 @@
 
 
 
-#### Flocker common Packages
+#### Flocker common node service Packages
 - hosts:
     - controlnode
     - flockernode
@@ -70,7 +72,7 @@
       name: docker-engine
       state: latest
 
-  - name: Service Docker Starting
+  - name: Starting docker service
     service:
       name: docker
       state: started
@@ -89,3 +91,189 @@
      state: directory 
      mode: 0755
 
+
+#### Configuring Flocker with keys and certificates
+
+- hosts:
+    - controlnode
+  tasks:
+  - name: Manually create the initial virtualenv
+    command: virtualenv /root/flocker-client -p python2.7 creates="/root/flocker-client"
+
+
+  - name: Creating Cert and Keys for Control service
+    command: /root/flocker-client/bin/flocker-ca initialize flockercluster  creates=/root/cluster.*
+
+  - name: Creating Cert and Keys for Control service
+    command: /root/flocker-client/bin/flocker-ca create-control-certificate flocker.control  creates=/root/control-flocker.control.*
+
+  - name: Creating Cert and Keys for Node service
+    command: /root/flocker-client/bin/flocker-ca create-node-certificate   
+
+  - name: Creating Cert and Keys for plugin service
+    command: /root/flocker-client/bin/flocker-ca create-api-certificate plugin  creates=/root/plugin.*
+
+  - name: Transfer file from cli to local
+    fetch:
+       src: /root/cluster.crt
+       dest: /etc/ansible/certs
+       flat: yes
+  - name: Transfer file from cli to local
+    fetch:
+      src: /root/cluster.key
+      dest: /etc/ansible/certs
+      flat: yes
+  - name: Transfer file from cli to local
+    fetch:
+       src: /root/control-flocker.control.key
+       dest: /etc/ansible/certs
+       flat: yes
+  - name: Transfer file from cli to local
+    fetch:
+       src: /root/control-flocker.control.crt
+       dest: /etc/ansible/certs
+       flat: yes
+  - name: Transfer file from cli to local
+    fetch:
+       src: /root/7100d87a-934c-4615-9e59-50c91845b7fc.crt
+       dest: /etc/ansible/certs
+       flat: yes
+  - name: Transfer file from cli to local
+    fetch:
+       src: /root/7100d87a-934c-4615-9e59-50c91845b7fc.key
+       dest: /etc/ansible/certs
+       flat: yes
+
+  - name: Transfer plugin file from cli to local
+    fetch:
+      src: /root/plugin.key
+      dest: /etc/ansible/certs
+      flat: yes
+  - name: Transfer plugin file from cli to local
+    fetch:
+      src: /root/plugin.crt
+      dest: /etc/ansible/certs
+      flat: yes
+
+
+############## Copying Control service certs to control node #########
+
+
+- hosts:
+    - controlnode
+  tasks:
+
+  - name: Transfer file from local to control
+    copy:
+       src: /etc/ansible/certs/cluster.crt
+       dest: /etc/flocker
+  - name: Transfer file from local to control
+    copy:
+       src: /etc/ansible/certs/control-flocker.control.crt
+       dest: /etc/flocker
+  - name: Transfer file from local to control
+    copy:
+       src: /etc/ansible/certs/control-flocker.control.key
+       dest: /etc/flocker
+
+######### Change file name and set permissions######
+
+  - name: change file name to node.crt
+    command: mv /etc/flocker/control-flocker.control.crt  /etc/flocker/control-service.crt
+  - name: change file name to node.key
+    command: mv /etc/flocker/control-flocker.control.key  /etc/flocker/control-service.key
+
+  - name: Set permissions
+    file:
+      path: /etc/flocker
+      state: touch
+      mode: 0700
+  - name: Set permissions
+    file:
+      path: /etc/flocker/control-service.key
+      state: touch
+      mode: 0600
+
+
+############## Starting Control service ###########
+  - name: Control Service  Starting
+    service:
+      name: flocker-control
+      state: started
+
+
+
+
+## ############## Copying node certs to agents #################
+
+
+  
+- hosts:
+    - flockernode
+  tasks:
+
+  - name: Transfer file from local to agent
+    copy:
+       src: /etc/ansible/certs/cluster.crt
+       dest: /etc/flocker
+  - name: Transfer file from local to agent
+    copy:
+       src: /etc/ansible/certs/7100d87a-934c-4615-9e59-50c91845b7fc.crt
+       dest: /etc/flocker
+  - name: Transfer file from local to agent
+    copy:
+       src: /etc/ansible/certs/7100d87a-934c-4615-9e59-50c91845b7fc.key
+       dest: /etc/flocker
+
+########### Copying  API Client Certificate for the Flocker Plugin for Docker ##########
+
+  - name: Transfer plugin file from local to agent
+    copy:
+       src: /etc/ansible/certs/plugin.key
+       dest: /etc/flocker
+  - name: Transfer file from local to agent
+    copy:
+       src: /etc/ansible/certs/plugin.crt
+       dest: /etc/flocker
+
+
+###############Rename node certificates and set permissions #######################
+
+  - name: change file name to node.crt
+    command: mv /etc/flocker/7100d87a-934c-4615-9e59-50c91845b7fc.crt  /etc/flocker/node.crt
+  - name: change file name to node.key
+    command: mv /etc/flocker/7100d87a-934c-4615-9e59-50c91845b7fc.key  /etc/flocker/node.key
+
+
+  - name: Set permissions
+    file:
+      path: /etc/flocker
+      state: touch
+      mode: 0700
+  - name: Set permissions
+    file:
+      path: /etc/flocker/node.key
+      state: touch
+      mode: 0600
+######### Copying agent.yml to flocker agent #####
+
+  - name: copy agent.yml
+    copy:
+       src: agent.yml
+       dest: /etc/flocker
+
+
+############### Starting Control service ###########
+
+  - name: Control Service  Starting
+    service:
+         name: flocker-dataset-agent
+         state: started
+  - name: Control Service  Starting
+    service:
+         name: flocker-container-agent
+         state: started
+  - name: Control Service  Starting
+    service:
+         name: flocker-docker-plugin
+         state: started
