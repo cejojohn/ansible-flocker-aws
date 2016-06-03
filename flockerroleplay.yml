@@ -20,3 +20,16 @@
    - set up flocker node services 
 
 
+- hosts:
+   - flockercli
+  vars:
+   - controlhost: 192.168.56.104
+  roles:
+   - swarm-manager
+- hosts:
+   - flockernode
+  vars:
+   - controlhost: 192.168.56.104
+  roles:
+   - swarm-agent
+
