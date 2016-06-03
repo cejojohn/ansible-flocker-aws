@@ -1,0 +1,62 @@
+---
+- name: copying node certs from local to agent
+  copy:
+    src: /etc/ansible/flockercerts/{{ ansible_host }}/node.crt
+    dest: /etc/flocker/
+- name: copying node certs from local to agent
+  copy:
+    src: /etc/ansible/flockercerts/{{ ansible_host }}/node.key
+    dest: /etc/flocker/
+- name: copying node certs from local to agent
+  copy:
+    src: /etc/ansible/flockercerts/cluster.crt
+    dest: /etc/flocker/
+  
+
+########### Copying  API Client Certificate for the Flocker Plugin for Docker ##########
+
+- name: Transfer plugin file from local to agent
+  copy:
+    src: /etc/ansible/flockercerts/plugin.key
+    dest: /etc/flocker
+- name: Transfer file from local to agent
+  copy:
+    src: /etc/ansible/flockercerts/plugin.crt
+    dest: /etc/flocker
+
+
+############ Setting node certificates permissions #######################
+
+- name: Set permissions
+  file:
+    path: /etc/flocker
+    state: touch
+    mode: 0700
+- name: Set permissions
+  file:
+    path: /etc/flocker/node.key
+    state: touch
+    mode: 0600
+######### Copying agent.yml to flocker agent #####
+
+- name: copy agent.yml
+  copy:
+    src: agent.yml
+    dest: /etc/flocker
+                                                           
+
+
+
+- name: Control Service  Starting
+  service:
+      name: flocker-dataset-agent
+      state: started
+- name: Control Service  Starting
+  service:
+      name: flocker-container-agent
+      state: started
+- name: Control Service  Starting
+  service:
+     name: flocker-docker-plugin
+     state: started
+ 

@@ -1,0 +1,16 @@
+---
+- name: Add Repo
+  copy:
+    src: docker.repo
+    dest: /etc/yum.repos.d
+
+- name: Docker installation
+  yum:
+    name: docker-engine
+    state: latest
+
+- name: Service Docker Starting
+  service:
+     name: docker
+     state: started
+

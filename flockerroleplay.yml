@@ -1,0 +1,35 @@
+---
+- hosts:
+   - flockercli
+  roles:
+   - docker
+   - docker-compose
+   - flocker-client
+   - certs-key-gen
+   - control-certs
+  tags:
+   - Flocker Client SetUp
+
+- hosts:
+   - flockernode
+  roles:
+   - docker
+   - node-service
+   - node-certs
+  tags:
+   - set up flocker node services 
+
+
+- hosts:
+   - flockercli
+  vars:
+   - controlhost: 192.168.56.104
+  roles:
+   - swarm-manager
+- hosts:
+   - flockernode
+  vars:
+   - controlhost: 192.168.56.104
+  roles:
+   - swarm-agent
+

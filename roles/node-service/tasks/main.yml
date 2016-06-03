@@ -1,0 +1,15 @@
+---
+- name: flocker node service
+  yum:
+    name: https://clusterhq-archive.s3.amazonaws.com/centos/clusterhq-release.el7.centos.noarch.rpm
+    state: present
+- name: Installing node service packages
+  yum:
+    name: clusterhq-flocker-node,clusterhq-flocker-docker-plugin
+    state: latest
+- name: Creating flocker directory
+  file: 
+    path: /etc/flocker 
+    state: directory 
+    mode: 0755
+
