@@ -61,7 +61,6 @@
 - hosts:
     - controlnode
     - flockernode
-    - flockernode1
   tasks:
   - name: Add Repo
     copy:
@@ -98,6 +97,8 @@
 - hosts:
     - controlnode
   tasks:
+  - name: clearing the directory flockercerts, if it exists.
+    file: path=/root/flockercerts/ state=absent
 
   - name: creating the required directories for certificate creation
     file: path=/root/flockercerts/node state=directory mode=0755 recurse=yes
@@ -194,7 +195,6 @@
 
 - hosts:
     - flockernode
-    - flockernode1
   tasks:
   - name: copying node certs from local to agent
     copy:
@@ -257,3 +257,25 @@
     service:
          name: flocker-docker-plugin
          state: started
+
+- hosts:
+   - controlnode
+  vars:
+   - controlhost: 192.168.56.104
+
+  tasks:
+
+  - name: Running Consul container
+    command: docker run -d -p 8500:8500 --name=consul progrium/consul -server -bootstrap
+  - name: Running Swarm Manager
+    command: docker run -d -p 4000:4000 swarm manage -H :4000 --replication --advertise {{ controlhost }}:4000 consul://{{ controlhost }}:8500
+
+- hosts:
+   - flockernode
+  vars:
+   - controlhost: 192.168.56.104
+
+  tasks:
+  - name:
+    command: docker run -d swarm join --advertise={{ ansible_host}}:2375 consul://{{ controlhost }}:8500
+
