@@ -1,2 +1,2 @@
 # ansible-flocker-aws
-In this dev branch we can do the initial stage development and testing.
+Currently we are building a playbook for complete implementation and later on we will move on to role creation.
