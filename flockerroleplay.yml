@@ -1,0 +1,22 @@
+---
+- hosts:
+   - flockercli
+  roles:
+   - docker
+   - docker-compose
+   - flocker-client
+   - certs-key-gen
+   - control-certs
+  tags:
+   - Flocker Client SetUp
+
+- hosts:
+   - flockernode
+  roles:
+   - docker
+   - node-service
+   - node-certs
+  tags:
+   - set up flocker node services 
+
+

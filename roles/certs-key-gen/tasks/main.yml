@@ -1,0 +1,47 @@
+---
+- name: clearing the directory flockercerts, if it exists.
+  file: path=/root/flockercerts/ state=absent
+
+- name: creating the required directories for certificate creation
+  file: path=/root/flockercerts/node state=directory mode=0755 recurse=yes
+
+
+- name: Creating Cluster, Control and Plugin certs
+  command: chdir=/root/flockercerts/ {{ item }}
+  with_items:
+      - /root/flocker-client/bin/flocker-ca initialize flockercluster
+      - /root/flocker-client/bin/flocker-ca create-control-certificate flocker.control
+      - /root/flocker-client/bin/flocker-ca create-api-certificate plugin
+
+- name: Creating Cert and Keys for Node service
+  shell: mkdir /root/flockercerts/node/{{ item }} ; cd /root/flockercerts/ ; /root/flocker-client/bin/flocker-ca create-node-certificate --outputpath=/root/flockercerts/node/{{ item }} ; cd /root/flockercerts/node/{{ item }} ; mv *.crt node.crt ; mv *.key node.key
+  with_items: "{{ groups['flockernode'] }}"
+
+- name: Transfer control certs cli to local
+  fetch:
+     src: "{{ item }}"
+     dest: /etc/ansible/flockercerts/
+     flat: yes
+  with_items:
+       - /root/flockercerts/cluster.crt
+       - /root/flockercerts/cluster.key
+       - /root/flockercerts/control-flocker.control.crt
+       - /root/flockercerts/control-flocker.control.key
+       - /root/flockercerts/plugin.crt
+       - /root/flockercerts/plugin.key
+
+- name: transfering node certs from cli to local
+  fetch:
+     src: /root/flockercerts/node/{{ item }}/node.crt
+     dest: /etc/ansible/flockercerts/{{ item }}/
+     flat: yes
+  with_items: "{{ groups['flockernode'] }}"
+
+- name: fetching node key file from cli to local
+  fetch:
+     src: /root/flockercerts/node/{{ item }}/node.key
+     dest: /etc/ansible/flockercerts/{{ item }}/
+     flat: yes
+  with_items: "{{ groups['flockernode'] }}"
+
+
