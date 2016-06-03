@@ -1,0 +1,281 @@
+---
+- hosts:
+    - flockercli
+  tasks:
+  - name: Add Repo
+    copy:
+     src: docker.repo
+     dest: /etc/yum.repos.d
+
+  - name: Docker installation
+    yum:
+      name: docker-engine
+      state: latest
+
+  - name: Service Docker Starting
+    service:
+      name: docker
+      state: started
+  
+
+
+  - name: install epel-release
+    yum:
+      name: epel-release
+      state: latest
+  - name: pip installation
+    yum:
+      name: python-pip
+      state: latest
+  - name: Docker-compose installation
+    pip:
+      name: docker-compose
+  
+
+
+  - name: Flocker Client
+    yum :
+      name: gcc,libffi-devel,openssl-devel,python,python-devel,python-virtualenv
+      state: latest 
+
+
+  - name: Manually create the initial virtualenv
+    command: virtualenv /root/flocker-client -p python2.7 creates="/root/flocker-client"
+
+  - name: virtualenv activate and package installation
+    pip: 
+      name: pip
+      state: latest
+      virtualenv: /root/flocker-client
+      virtualenv_python: python2.7
+  - name: Virtualenv active and package installation 
+    pip:
+      name: https://clusterhq-archive.s3.amazonaws.com/python/Flocker-1.12.0-py2-none-any.whl
+      state: latest
+      virtualenv: /root/flocker-client
+      virtualenv_python: python2.7
+
+
+
+#### Flocker common node service Packages
+- hosts:
+    - controlnode
+    - flockernode
+  tasks:
+  - name: Add Repo
+    copy:
+     src: docker.repo
+     dest: /etc/yum.repos.d
+
+  - name: Docker installation
+    yum:
+      name: docker-engine
+      state: latest
+
+  - name: Starting docker service
+    service:
+      name: docker
+      state: started
+
+  - name: flocker node service
+    yum:
+      name: https://clusterhq-archive.s3.amazonaws.com/centos/clusterhq-release.el7.centos.noarch.rpm
+      state: present
+  - name: Installing node service packages
+    yum:
+      name: clusterhq-flocker-node,clusterhq-flocker-docker-plugin
+      state: latest
+  - name: Creating flocker directory
+    file: 
+     path: /etc/flocker 
+     state: directory 
+     mode: 0755
+
+
+#### Configuring Flocker with keys and certificates
+
+- hosts:
+    - controlnode
+  tasks:
+  - name: clearing the directory flockercerts, if it exists.
+    file: path=/root/flockercerts/ state=absent
+
+  - name: creating the required directories for certificate creation
+    file: path=/root/flockercerts/node state=directory mode=0755 recurse=yes
+
+
+  - name: Creating Cluster, Control and Plugin certs
+    command: chdir=/root/flockercerts/ {{ item }}
+    with_items:
+      - /root/flocker-client/bin/flocker-ca initialize flockercluster
+      - /root/flocker-client/bin/flocker-ca create-control-certificate flocker.control
+      - /root/flocker-client/bin/flocker-ca create-api-certificate plugin
+
+  - name: Creating Cert and Keys for Node service
+    shell: mkdir /root/flockercerts/node/{{ item }} ; cd /root/flockercerts/ ; /root/flocker-client/bin/flocker-ca create-node-certificate --outputpath=/root/flockercerts/node/{{ item }} ; cd /root/flockercerts/node/{{ item }} ; mv *.crt node.crt ; mv *.key node.key
+    with_items: "{{ groups['flockernode'] }}"
+
+  - name: Transfer control certs cli to local
+    fetch:
+       src: "{{ item }}"
+       dest: /etc/ansible/flockercerts/
+       flat: yes
+    with_items:
+       - /root/flockercerts/cluster.crt
+       - /root/flockercerts/cluster.key
+       - /root/flockercerts/control-flocker.control.crt
+       - /root/flockercerts/control-flocker.control.key
+       - /root/flockercerts/plugin.crt
+       - /root/flockercerts/plugin.key
+
+  - name: transfering node certs from cli to local
+    fetch:
+       src: /root/flockercerts/node/{{ item }}/node.crt
+       dest: /etc/ansible/flockercerts/{{ item }}/
+       flat: yes
+    with_items: "{{ groups['flockernode'] }}"
+
+  - name: fetching node key file from cli to local
+    fetch:
+       src: /root/flockercerts/node/{{ item }}/node.key
+       dest: /etc/ansible/flockercerts/{{ item }}/
+       flat: yes
+    with_items: "{{ groups['flockernode'] }}"
+
+
+############## Copying Control service certs to control node #########
+
+
+- hosts:
+    - controlnode
+  tasks:
+
+  - name: Transfer file from local to control
+    copy:
+       src: /etc/ansible/flockercerts/cluster.crt
+       dest: /etc/flocker
+  - name: Transfer file from local to control
+    copy:
+       src: /etc/ansible/flockercerts/control-flocker.control.crt
+       dest: /etc/flocker
+  - name: Transfer file from local to control
+    copy:
+       src: /etc/ansible/flockercerts/control-flocker.control.key
+       dest: /etc/flocker
+
+######### Change file name and set permissions######
+
+  - name: change file name to control-service.crt
+    command: mv /etc/flocker/control-flocker.control.crt  /etc/flocker/control-service.crt
+  - name: change file name to control-service.key
+    command: mv /etc/flocker/control-flocker.control.key  /etc/flocker/control-service.key
+
+  - name: Set permissions
+    file:
+      path: /etc/flocker
+      state: touch
+      mode: 0700
+  - name: Set permissions
+    file:
+      path: /etc/flocker/control-service.key
+      state: touch
+      mode: 0600
+
+
+############## Starting Control service ###########
+  - name: Control Service  Starting
+    service:
+      name: flocker-control
+      state: started
+
+
+
+
+## ############## Copying node certs to agents #################
+
+- hosts:
+    - flockernode
+  tasks:
+  - name: copying node certs from local to agent
+    copy:
+        src: /etc/ansible/flockercerts/{{ ansible_host }}/node.crt
+        dest: /etc/flocker/
+  - name: copying node certs from local to agent
+    copy:
+        src: /etc/ansible/flockercerts/{{ ansible_host }}/node.key
+        dest: /etc/flocker/
+  - name: copying node certs from local to agent
+    copy:
+        src: /etc/ansible/flockercerts/cluster.crt
+        dest: /etc/flocker/
+
+  
+
+########### Copying  API Client Certificate for the Flocker Plugin for Docker ##########
+
+  - name: Transfer plugin file from local to agent
+    copy:
+       src: /etc/ansible/flockercerts/plugin.key
+       dest: /etc/flocker
+  - name: Transfer file from local to agent
+    copy:
+       src: /etc/ansible/flockercerts/plugin.crt
+       dest: /etc/flocker
+
+
+############### Setting node certificates permissions #######################
+
+  - name: Set permissions
+    file:
+      path: /etc/flocker
+      state: touch
+      mode: 0700
+  - name: Set permissions
+    file:
+      path: /etc/flocker/node.key
+      state: touch
+      mode: 0600
+######### Copying agent.yml to flocker agent #####
+
+  - name: copy agent.yml
+    copy:
+       src: agent.yml
+       dest: /etc/flocker
+
+
+############### Starting Node service ###########
+
+  - name: Control Service  Starting
+    service:
+         name: flocker-dataset-agent
+         state: started
+  - name: Control Service  Starting
+    service:
+         name: flocker-container-agent
+         state: started
+  - name: Control Service  Starting
+    service:
+         name: flocker-docker-plugin
+         state: started
+
+- hosts:
+   - controlnode
+  vars:
+   - controlhost: 192.168.56.104
+
+  tasks:
+
+  - name: Running Consul container
+    command: docker run -d -p 8500:8500 --name=consul progrium/consul -server -bootstrap
+  - name: Running Swarm Manager
+    command: docker run -d -p 4000:4000 swarm manage -H :4000 --replication --advertise {{ controlhost }}:4000 consul://{{ controlhost }}:8500
+
+- hosts:
+   - flockernode
+  vars:
+   - controlhost: 192.168.56.104
+
+  tasks:
+  - name:
+    command: docker run -d swarm join --advertise={{ ansible_host}}:2375 consul://{{ controlhost }}:8500
+

@@ -1,0 +1,8 @@
+[flockercli]
+### Put your CLI IP here
+
+[controlnode]
+### Your control node IP here
+
+[flockernode]
+### Your node IP here
