@@ -1,0 +1,23 @@
+---
+- name: Flocker Client
+  yum :
+    name: gcc,libffi-devel,openssl-devel,python,python-devel,python-virtualenv
+    state: latest 
+
+
+- name: Manually create the initial virtualenv
+  command: virtualenv /root/flocker-client -p python2.7 creates="/root/flocker-client"
+
+- name: virtualenv activate and package installation
+  pip: 
+    name: pip
+    state: latest
+    virtualenv: /root/flocker-client
+    virtualenv_python: python2.7
+- name: Virtualenv active and package installation 
+  pip:
+    name: https://clusterhq-archive.s3.amazonaws.com/python/Flocker-1.12.0-py2-none-any.whl
+    state: latest
+    virtualenv: /root/flocker-client
+    virtualenv_python: python2.7
+

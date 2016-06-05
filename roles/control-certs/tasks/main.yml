@@ -1,0 +1,39 @@
+---
+- name: Transfer file from local to control
+  copy:
+     src: /etc/ansible/flockercerts/cluster.crt
+     dest: /etc/flocker
+- name: Transfer file from local to control
+  copy:
+    src: /etc/ansible/flockercerts/control-flocker.control.crt
+    dest: /etc/flocker
+- name: Transfer file from local to control
+  copy:
+    src: /etc/ansible/flockercerts/control-flocker.control.key
+    dest: /etc/flocker
+######### Change file name and set permissions######
+
+
+- name: change file name to control-service.crt
+  command: mv /etc/flocker/control-flocker.control.crt  /etc/flocker/control-service.crt
+- name: change file name to control-service.key
+  command: mv /etc/flocker/control-flocker.control.key  /etc/flocker/control-service.key
+
+- name: Set permissions
+  file:
+     path: /etc/flocker
+     state: touch
+     mode: 0700
+- name: Set permissions
+  file:
+     path: /etc/flocker/control-service.key
+     state: touch
+     mode: 0600
+
+
+############## Starting Control service ###########
+- name: Control Service  Starting
+  service:
+      name: flocker-control
+      state: started
+                 
